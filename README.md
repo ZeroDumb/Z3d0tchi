@@ -14,6 +14,7 @@ Always back up your configs before playing with new toys.
 
 ## Heads Up
 If you apply my config as-is, your display will likely change immediately. Consider it a style opinion — not gospel.
+![pwny display orientation](https://github.com/user-attachments/assets/732626b3-65f5-4c6c-a453-8a860a4d7422)
 
 ## Use Your Brain
 **This is for educational purposes only.**
@@ -34,3 +35,9 @@ Zero
 
 Found any of this fun or helpful? 
 Send caffeine to [Iamnotaskid](https://buymeacoffee.com/iamnotaskid)
+
+![BROKEN](https://github.com/user-attachments/assets/c04b4bdf-207e-4c6e-bdd9-e27169edb755) ![INTENSE](https://github.com/user-attachments/assets/2d38b122-8b05-4119-990c-e6bc0bd05bc9) ![MOTIVATED](https://github.com/user-attachments/assets/122b9660-db54-4f79-9923-715559af8c4c) ![DEBUG](https://github.com/user-attachments/assets/29bd8087-5695-4505-82c7-e04528b08af0)
+
+
+
+
