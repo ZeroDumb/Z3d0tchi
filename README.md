@@ -21,10 +21,10 @@ I do not condone, promote, or support illegal activity of any kind.
 You are responsible for how you use the tools, code, and concepts shared here. Seriously.
 
 ## Quick Links
-- [Plugins](/usr/local/share/pwnagotchi/plugins) - Custom plugins and experimental code
-- [Config File](/etc/pwnagotchi) - System configuration and settings
-- [Custom Faces - Retro Computer](/custom-faces) - Custom display faces and animations
-- [.txt and agent.py](/home/pi) - wordlists and custom agent.py
+- [Plugins](usr/local/share/pwnagotchi/custom-plugins) - Custom plugins and experimental code
+- [Config File](etc/pwnagotchi) - System configuration and settings
+- [Custom Faces - Retro Computer](custom-faces) - Custom display faces and animations
+- [.txt and agent.py](home/pi) - wordlists and custom agent.py
 
 Stay sharp. Stay grounded. Stay curious. Stay loud.
 
