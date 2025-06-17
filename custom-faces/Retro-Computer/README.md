@@ -1,0 +1,1 @@
+I did these all with py scripts, if you're interested in those I can upload, but for now, here's my small contribution. 
