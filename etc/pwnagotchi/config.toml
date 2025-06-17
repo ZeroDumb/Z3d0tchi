@@ -138,20 +138,6 @@ main.plugins.cuff.whitelist = ""
 
 main.plugins.hashieclean.enabled = false
 
-main.plugins.quickdic_throttled.enabled = true
-main.plugins.quickdic_throttled.face = "(·ω·)"
-main.plugins.quickdic_throttled.wordlist_folder = "/home/pi/wordlists/"
-main.plugins.quickdic_throttled.max_cpu_percent = 80
-main.plugins.quickdic_throttled.wordlists_per_batch = 3
-main.plugins.quickdic_throttled.batch_delay = 5
-main.plugins.quickdic_throttled.priority_wordlists = [
- "honeynet2.txt",
- "john-the-ripper.txt",
- "rockyou-75.txt",
-]
-main.plugins.better_quickdic.api = ""
-main.plugins.better_quickdic.id = ""
-
 main.plugins.tweak_view.enabled = true
 
 main.plugins.exp.enabled = true
