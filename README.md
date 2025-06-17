@@ -8,7 +8,7 @@ These files are organized to mirror where they'd typically go on your actual Pwn
 
 Your pwny may be different from mine.
 
-Don’t blindly overwrite stuff unless you’re confident in what you’re doing.
+Don't blindly overwrite stuff unless you're confident in what you're doing.
 
 Always back up your configs before playing with new toys.
 
@@ -20,5 +20,17 @@ If you apply my config as-is, your display will likely change immediately. Consi
 I do not condone, promote, or support illegal activity of any kind.
 You are responsible for how you use the tools, code, and concepts shared here. Seriously.
 
-ZeroDumb
+## Quick Links
+- [Plugins](/usr/local/share/pwnagotchi/plugins) - Custom plugins and experimental code
+- [Config File](/etc/pwnagotchi) - System configuration and settings
+- [Custom Faces - Retro Computer](/custom-faces) - Custom display faces and animations
+- [.txt and agent.py](/home/pi) - wordlists and custom agent.py
 
+Stay sharp. Stay grounded. Stay curious. Stay loud.
+
+Zero
+[zerodumb.dev](https://zerodumb.dev)
+
+
+Found any of this fun or helpful? 
+Send caffeine to [Iamnotaskid](https://buymeacoffee.com/iamnotaskid)
