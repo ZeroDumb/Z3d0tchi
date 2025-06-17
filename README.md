@@ -1,15 +1,24 @@
 # project-pwny
-Pwnagotchi plugins, code tweaks, configs, and more
+A collection of plugins, config tweaks, and experimental code for curious Pwnagotchis.
 
+This repo is built off the excellent work of [Jayofelony](https://github.com/jayofelony/pwnagotchi) and aims to expand it with additional features, enhancements, and chaos (of the lawful variety).
 
-I have built these all off of the [Jayofelony](https://github.com/jayofelony/pwnagotchi) img, additionally, I have tried to place these files in the same locations that they would go in your pwny. 
+## How to Use
+These files are organized to mirror where they'd typically go on your actual Pwnagotchi device. That said:
 
-## Note: 
+Your pwny may be different from mine.
 
-Your pwny may be different than mine, each has their own unique flavor. please make sure you know where to go and what you are updating. 
+Don’t blindly overwrite stuff unless you’re confident in what you’re doing.
 
-My config is for example only, if you use my config, your screen will imediately be different. I strongly urge that you make backup files of anything you have prior to using these pluggins, files, or configs.
+Always back up your configs before playing with new toys.
 
-## Extra Note:
+## Heads Up
+If you apply my config as-is, your display will likely change immediately. Consider it a style opinion — not gospel.
 
-For educational purposes only. I do not in any way promote, or condone illegal activities. Nothing provided here is for the intent of missuse. You must use your brain. 
+## Use Your Brain
+**This is for educational purposes only.**
+I do not condone, promote, or support illegal activity of any kind.
+You are responsible for how you use the tools, code, and concepts shared here. Seriously.
+
+ZeroDumb
+
