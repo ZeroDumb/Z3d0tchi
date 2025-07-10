@@ -191,6 +191,9 @@ main.plugins.quickdic_throttled.priority_wordlists = [
  "john-the-ripper.txt",
 ]
 main.plugins.quickdic_throttled.security_log = "/home/pi/security_audit.log"
+main.plugins.quickdic_throttled.api = ""
+main.plugins.quickdic_throttled.id = ""
+main.plugins.quickdic_throttled.potfile_path = "/home/pi/handshakes/quickdic.cracked.potfile"
 
 main.confd = "/etc/pwnagotchi/conf.d/"
 main.custom_plugin_repos = [
