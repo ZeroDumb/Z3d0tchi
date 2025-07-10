@@ -8,6 +8,9 @@ Displays message, logs, clears, alerts, etc...
 # Quickdic_Throttled
 - written because the normal quickdic either had to run on a 20 word list or crashed your RPI. this throttles the uploads, sorts your lists, and prioritizes the ones you select. you can adjust the speed and agression in the config.toml
 
+![QDT_webui](https://github.com/user-attachments/assets/7a748161-3d5e-4724-802d-f77232c3cc1f)
+
+
 # WPA3Parse
 - use case, simply identifies, and creates a copy of those specific handshakes in it's own dir/file
 
